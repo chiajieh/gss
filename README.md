@@ -1,0 +1,619 @@
+# gss
+Statistical Inference with the GSS Data
+---
+View project on https://chiajieh.github.io/gss/
+---
+### Chinwe Ajieh | chinweajieh@gmail.com
+ 
+## Setup
+
+### Load Packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(gridExtra)
+```
+
+### Load Data
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+The [General Social Survey (GSS)](http://gss.norc.org/About-The-GSS) is an observational study conducted by the National Opinion Research Center, at the University of Chicago.
+
+Since 1972, the GSS has been monitoring sociological and attitudinal trend, by gathering data on contemporary American society. The purpose is to explain trends and constants in attitudes, behaviors, and attributes. From 1972 to 2004, the GSS' target population was adults (18+) living in households in the United States, who were only able to do the survey in English. However, from 2006 till date, it has included those able to do the survey in English or Spanish. 
+
+Before 1994, GSS was conducted almost annually (except in 1979, 1981, or 1992, due to funding limitations). Since then, the GSS has been conducted in even numbered years, using dual sample design. This is done, majorly, via face-to-face interviews. In 2002, GSS started Computer-assisted personal interviewing (CAPI). Also, at times when it has proved difficult to arrange an in-person interview with a sampled respondent, interviews have been conducted via telephone.
+
+From 1972 to 1974 surveys, modified probability sampling (block-quota sample) was used. Full-probability sampling of households was used by GSS, to give each household an equal probability of being included in the survey, from 1975 to 2002. As a result of this, the GSS is self-weighting for household-level variables . In order to keep the design unbiased, GSS started to use a two-stage sub-sampling design for nonresponse and weights adjusted, from 2004. Cases from which no response was received after the initial stage of the field period are subsampled, and resources are focused on gaining cooperation from this subset, thus reducing both response error and nonreponse bias. The subsampling of segments was done using a simple systematic selection procedure. 
+
+Weight variables are included to adjust the alterations in sampling e.g over-representation of blacks in 1972, under-representation of male for all full-probability samples, under-representation of men in full-time employment for block-quota samples; and significant increment in the coverage of Mormons when the 1980 sample frame (controlled selection procedure in the first stage) was adopted (this was due to the addition of a primary sampling unit in Utah).
+
+The GSS is a result of retrospective observational study (as the data recorded are events that have taken place) and not an experimental study, hence no random assignment. We cannot make causal conclusions from the data (we can only associate). GSS uses random sampling as explained above; hence the data is generalizable. We are simply saying that since there is no random assignment, only random sampling, there is no causal relationship but only association and the data is generalizable.
+
+Our analysis will focus on the GSS 2012 report; hence, this data is generalizable to adults, aged 18 years and above, living in households in the United States, who are able to do the survey in English or Spanish.
+
+
+* * *
+
+
+## Part 2: Research Question
+
+We want to find out if there is a relationship between job satisfaction and if respondent is self-employed or works for someone else. Our analysis will focus on the GSS 2012 report.
+
+In doing so, we will answer the following questions:
+
+*1.*  Is there a difference in the population proportion of self-employed Americans who are satisfied with their jobs and of those who work for someone else and are satisfied with their jobs?
+
+*2.* Is the average family income (inflation-adjusted) of self-employed Americans who are very satisfied with their jobs greater than that of those who work for someone else and are very satisfied with their jobs?
+
+*3.* What is the typical family income (if different from the average family income) of self-employed Americans who are very satisfied with their jobs and also of those who work for someone else and are very satisfied with their jobs? Is there a difference in both typical family income?
+
+
+*Interest:* Personally, due to my career change decision, I have been wondering if job satisfaction is dependent on employment status or simply on the nature of job one is involved in, irrespective of whether one works for someone else or is self-employed. Also, out of curiosity, to know the average/typical family income of self-employed adults and those who work for someone else that is really satisfied with their jobs.
+
+
+* * *
+
+## Part 3: Exploratory Data Analysis
+In this analysis, we will exclude all missing results (All NAs).
+
+For the purpose of this analysis, we will define `wrkslf` as employment status, and the levels are self-employed and work for someone else.
+
+**The results of the analysis are generalized to adults, aged 18 years and above, living in households in the United States, who are able to do the survey in English or Spanish.**- *see part 1 for details.*
+
+*Note the term "we" used throughout this analysis simply refers to "me (/I) explaining the concept to my audience".*
+
+Before we begin our analysis, we will select the variables that are of importance to us and create a new dataframe from `gss` called `gssc` (this is after we have gone through [the code](https://d3c33hcgiwev3.cloudfront.net/_8abbe344133a7a8c98cfabe01a5075c2_gss.html?Expires=1553558400&Signature=ArlN0BdM0-8k1jlEs6ZmDHBlaabDlZtVlCZaXO5KfhcMp5fiucXhOJKAKesvfomewm12hvI3EzcYOl9jZevEzoSfEl5VeSjDiKQWLQlZ79WTJW9rsIgV6WsLVMJkT2KTI6mVbwY5wMh1mW4uUNvRc56NbbAi9fMKjuCihsKUJw0_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A) to know the variables we are interested in and their types/structures, keeping in mind our research question). 
+
+```{r}
+gssc <- gss %>%
+  filter(year == "2012") %>%
+  select(satjob, wrkslf, coninc, income06)
+```
+
+Use summary(gssc) to view the data summary and str(gssc) to view the structure of the data. Knowing the values that make up the variables (the type and structure) will ease our analysis.
+
+```{r}
+str(gssc)
+```
+
+```{r}
+summary(gssc)
+```
+
+To answer our research question, we want to know the number and proportion of self-employed respondents and also for those who work for someone else who are satisfied (very and moderately) and dissatisfied (very and a little) with their jobs.
+
+First, we find the count:
+
+```{r}
+gssc %>% 
+  filter(!is.na(wrkslf), !is.na(satjob)) %>% 
+  group_by(wrkslf) %>% 
+  count(satjob)
+```
+
+Then, we create a contingency table using the result above.
+
+<a id="my_chunk"></a>
+```{r}
+conting <- matrix(c(97, 45, 11, 2, 626, 486, 121, 43), ncol = 2, nrow = 4)
+colnames(conting) <- c("Self-Employed", "Someone Else")
+rownames(conting) <- c("Very Satisfied", "Mod. Satisfied", "A Little Dissat", "Very Dissatisfied")
+conting.table <- as.table(conting)
+conting.table
+```
+
+We can visualize the above result using a mosaic plot and a bar chart.
+
+```{r}
+mosaicplot(conting.table, main = "Relationship between Level of Job Satisfaction and Employment Status", 
+           color = "skyblue") 
+```
+
+
+
+```{r}
+gssc %>%
+  filter(!is.na(satjob), !is.na(wrkslf)) %>%
+  ggplot(aes(wrkslf, fill = satjob)) + geom_bar() + 
+  labs(title = "Relationship between Employment Status and Level of Job Satisfaction", x = "Employment Status") +
+  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+```
+
+More than 50% of self-employed Americans are very satisfied with their jobs, and approximately 50% of those who work for someone else are very satisfied with their jobs too.
+
+We will find the column proportion to know the proportion of self-employed respondents who are satisfied or not with their jobs and also for those who work for someone else e.g. 62.6% of self-employed respondents are very satisfied with their jobs, and 49.1% of respondents who work for someone else are very satisfied with their jobs.
+
+```{r}
+#Column proportion
+
+conting.table %>%
+  prop.table(margin = 2) %>%
+  round(3)
+```
+
+The percentage of self-employed respondents who are very dissatisfied with their jobs is very low, 1.3% while 3.4% of respondents who work for someone else are very dissatisfied with their jobs.
+
+We will perform a chi-square test of independence before generalizing our results (see Inference part below); though from the plots and summaries, we can see a relationship between respondents' employment status (self-employed and work for someone else) and job satisfaction level.
+
+
+#### Proportion of Self-Employed Americans who are Satisfied with their Jobs vs. those who Work for Someone Else and are Satisfied with their Jobs
+
+To analyze those satisfied with their jobs, we will group those "Very Satisfied" and "Moderately Satisfied" as "Satisfied" and those "A little Dissatisfied and Very Dissatisfied" as "Dissatisfied" by adding a new variable `lsatjob` to the dataframe `gssc`.
+
+```{r}
+gssc <- gssc %>% 
+  mutate(lsatjob = ifelse(satjob == "Very Satisfied", "Satisfied", 
+                          ifelse(satjob == "Mod. Satisfied", "Satisfied", "Dissatisfied")))
+```
+<a id="my_data1"></a>
+```{r}
+gssc %>% 
+  filter(!is.na(wrkslf), !is.na(lsatjob)) %>% 
+  group_by(wrkslf) %>% 
+  count(lsatjob)
+```
+
+We are interested in the proportion of self-employed respondents that are satisfied with their jobs and for those who work for someone else.
+
+```{r}
+gssc %>% 
+  filter(!is.na(wrkslf), !is.na(lsatjob)) %>% 
+  group_by(wrkslf) %>% 
+  summarise(prop = sum(lsatjob == "Satisfied")/n())
+```
+
+**91.6% of self-employed respondents are satisfied with their jobs, and 87.1% of those who work for someone else are satisfied**. In the inference section, we will carry out a hypothesis test and confidence interval to estimate if there is difference in the proportion of self-employed respondents and those who work for someone else, who are both satisfied with their jobs .
+
+
+#### Relationship between Income, Employment Status and Level of Job Satisfaction
+
+A great percentage of respondents who work for someone else and those self-employed are satisfied with their jobs. We will examine the income level for job satisfaction with respect to employment status (self-employed and work for someone else). Our focus, as pointed out in our research question, is on the average family income of those who are very satisfied with their jobs.
+
+
+```{r}
+Plot1 <- gssc %>%
+  filter(wrkslf == "Self-Employed", !is.na(satjob), !is.na(income06)) %>% 
+  ggplot(aes(income06, wrkslf, fill = satjob)) + 
+  geom_col() + coord_flip() + 
+  labs(x = "Total Family Income", y = "Self-Employed Respondents") + 
+  theme(legend.position = "none", axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+Plot2 <- gssc %>%
+  filter(wrkslf == "Someone Else", !is.na(satjob), !is.na(income06)) %>% 
+  ggplot(aes(income06, wrkslf, fill = satjob)) + 
+  geom_col() + coord_flip() + 
+  labs(x = "Total Family Income", y = "Respondents that Work for Someone Else") + 
+  theme(legend.justification = c(1,0), legend.position = c(1,0), axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank(), axis.title.x = element_text(hjust = 0.9))
+
+grid.arrange(Plot1, Plot2, ncol = 2, top = "Income Group for different Employment Status with respect to their Levels of Job Satisfaction")
+```
+
+From the bar chart, we can see that for both employment status, as the total family income level increases, the number of respondents very and moderately satisfied with their jobs increases with a few " a little dissatisfied" with their jobs (with an exception to self-employed respondents that earn above $110,000). However, for self-employed respondents, a good number of them are satisfied with their jobs irrespective of the level of their total family income with few, a little dissatisfied and a rare number, very dissatisfied. Other confounding variables like if respondent is single or married, labor force status of spouse, the type of job can be a major contributing factor to the level of job satisfaction.
+
+Let us get a clearer view of the total family income group of self-employed respondents and those who work for someone else who are very satisfied with their jobs.
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(wrkslf), !is.na(income06)) %>%
+  ggplot(aes(income06, fill = wrkslf)) + 
+  geom_bar() + coord_flip() +
+  labs(title = "Income Breakdown of very Satisfied Respondents wrt their Employment Status", x = "Income") +
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_blank(), 
+        axis.title.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+We want to evaluate the average family income (inflation-adjusted) for both employment status that are very satisfied with their jobs. To do this, we plot a histogram and boxplot and carry out summary statistics to determine the shape, center and variability of the data. 
+
+Remember that 97 out of 155 self-employed respondents and 626 of 1276 of those who work for someone else are very satisfied with their jobs (see contingency table above).
+
+
+```{r}
+p3 <- gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Self-Employed", !is.na(coninc)) %>% 
+  ggplot(aes(coninc)) + geom_histogram() +
+  labs(subtitle = "Self-Employed", x = "Family Income")
+
+p4 <- gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Someone Else", !is.na(coninc)) %>% 
+  ggplot(aes(coninc)) + geom_histogram() +
+  labs(subtitle = "Work for Someone Else", x = "Family Income")
+
+p5 <- gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Self-Employed", !is.na(coninc)) %>% 
+  ggplot(aes(sample = coninc, color = wrkslf)) + stat_qq() +
+  labs(subtitle = "Self-Employed", y = "Family Income") + 
+  theme(legend.position = "none")
+
+p6 <- gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Someone Else", !is.na(coninc)) %>% 
+  ggplot(aes(sample = coninc, color = wrkslf)) + stat_qq() +
+  labs(subtitle = "Work for Someone Else", y = "Family Income") + 
+  theme(legend.position = "none")
+
+grid.arrange(p3, p4, p5, p6, ncol = 2, top = "Distribution of Family Income Based on Employment Status of Very Satisfied Respondents")
+```
+
+
+Both sample distributions are strongly skewed to the right, and a typical family income would be the median of the distribution. The IQR will best explain the variability of both distributions.
+
+We plot a boxplot to visualize the samples
+<a id="my_data2"></a>
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(wrkslf), !is.na(coninc)) %>% 
+  ggplot(aes(wrkslf, coninc)) + geom_boxplot() +
+  labs(x = "Employment Status", y = "Family Income")
+```
+
+Both distributions are strongly right-skewed, as mentioned earlier, with  outliers above $150,000. The variability of family income of self-employed respondents is more than that of those who work for someone else, with a median income of about $50,000 and for "work for someone else", below $50,000.
+
+Let us carry out the summary statistics on both samples. 
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Self-Employed", !is.na(coninc)) %>% 
+  summarise(mean = mean(coninc), median = median(coninc), sd = sd(coninc), IQR = IQR(coninc), 
+            quant1 = quantile(coninc, 0.25), quant3 = quantile(coninc, 0.75))
+
+# Count
+gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Self-Employed", !is.na(coninc)) %>% 
+  count(wrkslf)
+```
+
+A self-employed American that is very satisfied with his job has a typical family income of $51,705, and family income variability is $70,855. Lower 25% of them have an income of $21,065 and 75%, $91,920. Their average family income is $70,911.8.
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Someone Else", !is.na(coninc)) %>% 
+  summarise(mean = mean(coninc), median = median(coninc), sd = sd(coninc), IQR = IQR(coninc), 
+            quant1 = quantile(coninc, 0.25), quant3 = quantile(coninc, 0.75))
+
+#Count
+gssc %>%
+  filter(satjob == "Very Satisfied", wrkslf == "Someone Else", !is.na(coninc)) %>% 
+  count(wrkslf)
+```
+
+An American who works for someone else, that is very satisfied with his job has a typical family income of $42,130 and family income variability is $55,535, less than that of self-employed American. Bottom 25% of them have an income of $21,065 (same as self-employed American) and 75%, $76,600, lower than self-employed American. Their average family income is $56,165.08.
+
+In the next section, we will find out if the average family income of self-employed Americans who are very satisfied  with their jobs is actually greater than that of those who work for someone else and are very satisfied with their jobs. We will carry out a hypothesis test to also estimate if there is a difference in their typical income.
+
+
+* * *
+
+## Part 4: Inference
+
+### Relationship between Job satisfaction and Employment Status (Respondents that are Self-Employed and those who Work for Someone Else)
+
+In order to answer the question- is there a relationship between job satisfaction and employment status, we will carry out a chi-square test of independence (for two categorical variables, at least 1 with >2 levels). See [contingency table above](#my_chunk) for the data.
+
+We will define the hypothesis for our test:
+
+H`0` (nothing is going on):   Job satisfaction and employment status are independent. Job satisfaction does not                                  vary by respondent's employment status.
+
+H`A` (something is going on): Job satisfaction and employment status are dependent. Job satisfaction does vary by                                respondent's employment status.
+
+Then, check if the conditions for the chi-square test is met:
+
+1.* **Independence:** The sampled observations are independent: the data were randomly sampled (see the data part above), and each group make up less than 10% of the population of self-employed Americans and also those who work for someone else. Also, each case contributes to only one cell in the table.
+
+*2.* **Sample size:** Each particular scenario (i.e cell) must have at least 5 expected cases. We are yet to confirm this condition. The values in the contingency table are the observed counts. We can calculate the expected counts by applying Pearson's Chi-squared test and then use`..$expected` to get the counts.
+
+```{r}
+#Chi-square Test
+
+chisq<- chisq.test(conting.table, correct = FALSE)
+chisq
+```
+
+At 5% significant level, the p-value is less than 0.05, so we reject the H`0`. **Hence the data provide convincing evidence that job satisfaction does vary by respondent's employment status** but we are yet to confirm if all expected counts have at least 5 cases.
+
+```{r}
+#Expected Counts
+
+chisq$expected
+```
+
+The expected count of self-employed respondents that are very dissatisfied with their jobs is just about 0.13 less than 5. We can ignore as it's approximately 5 (to a significant figure), it's just a cell, and our data is a 2 by 4 table, accept the result of the chi-square test above, but we could possibly have a type 1 error (rejecting the null hypothesis when it is actually true). 
+
+We can go ahead to use the `inference` function to get a detailed chi-square analysis or to be more certain with our result, collapse the last two rows as "dissatisfied" and perform our `inference` test or simply use the bootstrap test.
+
+We will go with the two latter suggestions to ensure the sample size condition is met and reduce type 1 error.
+
+***Bootstrapping***
+
+We will use the bootstrap method to test our hypothesis that employment status and job satisfaction are dependent, because of the reason stated above.
+
+```{r}
+gssc %>%
+  filter(!is.na(satjob), !is.na(wrkslf)) %>%
+  inference(y = wrkslf, x = satjob, type = "ht", statistic = "proportion", method = "simulation", 
+            alternative = "greater", boot_method = "perc", nsim = 15000)
+```
+
+The p-value is similar to that obtained from our Pearson's chi-square test and since it is below 0.05, **we reject the null hypothesis, confirming the conclusion from the Pearson's chi-square test above.**
+
+We will go ahead to confirm our results, using the other method from our suggestion.
+
+***Collapsing the Cells due to the <5 Expected Count*** 
+
+Create a new variable `csatjob` and add to the dataframe `gssc`.
+```{r}
+gssc <- gssc %>% 
+  mutate(csatjob = ifelse(satjob == "Very Satisfied", "Very Satisfied", 
+                          ifelse(satjob == "Mod. Satisfied", "Mod. Satisfied", "Dissatisfied")))
+```
+
+Find the observed counts. The expected counts and contingency table will be shown in our "inference" result.
+```{r}
+gssc %>% 
+  filter(!is.na(wrkslf), !is.na(csatjob)) %>% 
+  group_by(wrkslf) %>% 
+  count(csatjob)
+```
+
+So we will go ahead with the hypothesis test that employment status and job satisfaction are associated at 5% significance level as all conditions have been met.
+
+```{r}
+gssc %>%
+  filter(!is.na(csatjob), !is.na(wrkslf)) %>%
+  inference(y = wrkslf, x = csatjob, type = "ht", statistic = "proportion", method = "theoretical", 
+            alternative = "greater")
+```
+
+The p-value is less than our previous results, hence, reducing the possibility of a type 1 error. 
+
+So, at 5% significant level, the p-value is less than 0.05, so we reject the H`0`. **Hence, the data provide convincing evidence that job satisfaction and employment status are dependent as stated earlier.**
+
+
+
+#### Difference between those who are Self-Employed and are Satisfied with their Jobs and those who work for Someone Else and are Satisfied with their Jobs
+
+We want to find out if there is a difference between the population proportions of self-employed Americans who are satisfied with their jobs and those who work for someone else and are satisfied with their jobs. Please [click](#my_data1) to see data above.
+
+From our data, 91.6% of self-employed respondents are satisfied with their jobs and 87.1% of those who work for someone else are satisfied.
+
+First, **we will use a 95% confidence interval to estimate the difference.**
+
+**Parameter of interest:** Difference between all self-employed Americans that are satisfied with their jobs and those who work for someone else that are satisfied with their jobs. $p$`self-employed` - $p$`someone else` 
+
+**Point estimate:** Difference between the (sampled) self-employed respondents that are satisfied with their jobs and those (sampled) who work for someone else that are satisfied with their jobs. p^`self-employed` - p^`someone else`
+
+We check if the conditions for comparing two independent proportions are met.
+
+*1.* Independence: random sample: both populations were sampled randomly; the 10% condition is met for both populations. So, sampled self-employed respondents that are satisfied with their jobs are independent of each other and also those (sampled) who work for someone else that are satisfied with their jobs.
+
+*2.* Sample size/skew: *Self-employed- met:* 142 successes and 13 failures.
+                      `*Someone else- met:*  1112 successes and 164 failures.
+                      
+Since the sample size/skew condition is met, we can assume that the sampling distribution of the difference between the two proportions is nearly normal. So, we will go ahead to create and interpret a 95% confidence interval of the difference.
+
+```{r}
+gssc %>%
+  filter(!is.na(lsatjob), !is.na(wrkslf)) %>%
+  inference(y = lsatjob, x = wrkslf, type = "ci", statistic = "proportion", success = "Satisfied", 
+            method = "theoretical")
+```
+
+*We are 95% confident that the population proportions of self-employed Americans at large that are satisfied with their jobs are between 0.27% less and 9.2% more than Americans who work for someone else that are satisfied with their jobs.*
+
+So based on the confidence interval we calculated above, should we expect to find a significant difference (at the equivalent significance level) between the population proportions of self-employed Americans at large that are satisfied with their jobs and Americans who work for someone else that are satisfied with their jobs?
+
+$p$`self-employed` - $p$`someone else` = (-0.0027 , 0.092)
+
+H`0`: $p$`self-employed` - $p$`someone else` = 0. The null value is included in the interval, so we fail to reject the H`0`. Thus, the answer to the above question is no. **From our data, there is no significant difference between the population proportions of self-employed Americans at large that are satisfied with their jobs and Americans who work for someone else that are satisfied with their jobs.**
+
+We will confirm the above result by conducting **a hypothesis test, at 5% significance level**, to evaluate if there is a difference between  self-employed Americans who are satisfied with their jobs and those who work for someone else and are satisfied with their jobs.
+
+Let us define the hypothesis for our test:
+
+H`0`: $p$`self-employed` = $p$`someone else`. The population proportion of self-employed Americans who are satisfied with their jobs is the same as those who work for someone else that are satisfied with their jobs.
+
+H`A`: $p$`self-employed` != $p$`someone else`. There is a difference between the population proportions of self-employed Americans who are satisfied with their jobs and those who work for someone else and are satisfied with their jobs.
+
+Then, check if the conditions for inference for conducting a hypothesis test, to compare two proportions, are met:
+
+*1.* Independence: *within groups-met:* random sample: both populations were sampled randomly; the 10% condition is met for both populations. So, sampled self-employed respondents that are satisfied with their jobs are independent of each other and also those (sampled) who work for someone else that are satisfied with their jobs.
+*between groups-met:* We do not expect sampled self-employed respondents that are satisfied with their jobs and those (sampled) who work for someone else that are satisfied with their jobs to be dependent.
+
+*2.* Sample size/skew: We need the pooled proportion to check the success-failure condition (success condition- n*p^`pool` >= 10 and failure condition- n(1 - p^`pool`) >= 10)
+
+```{r}
+# Pooled proportion = total successes/total n
+
+phat_pool = (142 + 1112)/(142 + 13 + 1112 + 164)
+phat_pool
+
+# Self-employed: success
+
+155 * phat_pool
+
+# Self-employed: failure
+
+155 * (1 - phat_pool)
+
+# Someone else: success
+
+1276 * phat_pool
+
+# Someone else: failure
+
+1276 * (1 - phat_pool)
+```
+
+
+*Sample size/skew condition is met for both self-employed and someone else.* We can assume that the sampling distribution of the difference between the two proportions is nearly normal. 
+
+So, we can go ahead with our hypothesis test, as all conditions are met.
+
+```{r}
+gssc %>%
+  filter(!is.na(lsatjob), !is.na(wrkslf)) %>%
+  inference(y = lsatjob, x = wrkslf, type = "ht", statistic = "proportion", success = "Satisfied", 
+            method = "theoretical", alternative = "twosided")
+```
+
+The p-value is greater than 0.05, so we fail to reject the null hypothesis. **The data do not provide strong evidence that the population proportion of self-employed Americans who are satisfied with their jobs is different from those who work for someone else and are satisfied with their jobs.** This agrees with the conclusion from the confidence interval approach.
+
+
+
+
+####Difference in the Average and Typical Family Income of Self-Employed Americans who are very Satisfied  with their Jobs and of those who Work for Someone Else and are very Satisfied with their Jobs. 
+
+We want to find out if the average family income (inflation-adjusted) of self-employed Americans who are very satisfied with their jobs is actually greater than those who work for someone else and are very satisfied with their jobs. Please [click](#my_data2) to see data above.
+
+From our data, the average family income of self-employed respondents who are very satisfied with their jobs is $70,911.8 and that of those who work for someone else and are very satisfied with their jobs is $56,165.08.
+
+First, **we will use a 90% confidence interval to estimate the difference.** We chose a 90% confidence interval so that our findings will be in-sync with our hypothesis test, which would be one-sided at a significant level of 5%.
+
+**Parameter of interest:** Difference between the average family incomes of all self-employed Americans that are very satisfied with their jobs and those who work for someone else that are very satisfied with their jobs. mu`self-employed` - mu`someone else.` 
+
+**Point estimate:** Difference between the average family incomes of sampled self-employed Americans that are very satisfied with their jobs and those (sampled) who work for someone else that are very satisfied with their jobs. $x?$`self-employed` - $x?$`someone else.`
+
+We check if the conditions for comparing two independent means are met.
+
+*1.* Independence: *within groups-met:* random sample: both populations were sampled randomly; the 10% condition is met for both populations. So, the family income of sampled self-employed respondents that are satisfied with their jobs are independent of each other and also those (sampled) who work for someone else that are satisfied with their jobs.
+*between groups-met:* Both groups are independent of each other (non-paired).
+
+*2.* Sample size/skew: Both distributions are strongly skewed to the right; the sample sizes of 81 and 578 would make it reasonable to model each mean separately using a t-distribution.
+
+All conditions are met, so we will go ahead to estimate the difference, using a 90% confidence interval.
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(coninc), !is.na(wrkslf)) %>%
+  inference(y = coninc, x = wrkslf, type = "ci", statistic = "mean", method = "theoretical", conf_level = 0.90)
+```
+
+*From our result above, we are 90% confident that the average family income (inflation-adjusted) of self-employed Americans at large that are very satisfied with their jobs is $2,635.08 to $26,858.36 more than that of Americans who work for someone else that are very satisfied with their jobs.*
+
+So based on the confidence interval we calculated above, should we expect to find a significant difference (at the equivalent significance level) between the average family incomes of self-employed Americans at large that are very satisfied with their jobs and Americans who work for someone else that are very satisfied with their jobs?
+
+mu`self-employed` - mu`someone else` = (2635.0838 , 26858.362)
+
+H`0`: mu`self-employed` - mu`someone else` = 0. This value is not in the confidence interval; we reject the H`0`. So, the answer to the above question is yes. **From our data, the average family income of self-employed Americans at large that are very satisfied with their jobs is greater than that of Americans who work for someone else that are very satisfied with their jobs.**
+
+We will confirm the above result by conducting **a hypothesis test, at 5% significance level,** to evaluate if the average family income of self-employed Americans who are very satisfied with their jobs is greater than that of those who work for someone else and are very satisfied with their jobs.
+
+Let us define the hypothesis for our test:
+
+H`0`: mu`self-employed` = mu`someone else`. The average family incomes of self-employed Americans who are very satisfied with their jobs is the same as those who work for someone else that are very satisfied with their jobs.
+
+H`A`: mu`self-employed` > mu`someone else`. The average family income of self-employed Americans who are very satisfied with their jobs is greater than that of those who work for someone else and are very satisfied with their jobs.
+
+The conditions for inference for comparing two independent means are met, so we go ahead with the hypothesis test.
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(coninc), !is.na(wrkslf)) %>%
+  inference(y = coninc, x = wrkslf, type = "ht", statistic = "mean", method = "theoretical", 
+            alternative = "greater")
+```
+
+The p-value is less than 0.05, so we reject the null hypothesis. **The data provide convincing evidence that the average family income of self-employed Americans who are very satisfied with their jobs is greater than those who work for someone else and are very satisfied with their jobs.** This agrees with the conclusion from the confidence interval approach.
+
+
+
+
+***Typical Family Income of Self-Employed Americans who are Very Satisfied with their Jobs vs. those who Work for Someone Else that are very Satisfied with their Jobs***
+
+Both sample distributions are strongly right skewed and as discussed earlier, the typical family income is the median income. So, we will use the bootstrap method (for comparing medians) to estimate if there is a difference in the typical family incomes of self-employed Americans who are very satisfied with their jobs and those who work for someone else and are very satisfied with their jobs.
+
+From [our data](#my_data2), the typical family income of self-employed respondents who are very satisfied with their jobs is $51,705 and that of those who work for someone else and are very satisfied with their jobs is $42,130.
+
+We will estimate the difference in the typical family incomes using a 95% confidence interval and carry out a hypothesis test at 5% significant level, using the standard error method. All conditions are met, as stated earlier.
+
+**Parameter of interest:** Difference between the typical family incomes of all self-employed Americans that are very satisfied with their jobs and those who work for someone else that are very satisfied with their jobs. Pop_median`self-employed` - Pop_median`someone else` 
+
+**Point estimate:** Difference between the typical family incomes of sampled self-employed Americans that are very satisfied with their jobs and those (sampled) who work for someone else that are very satisfied with their jobs. med`self-employed` - med`someone else`
+
+***Bootstrapping, at 95% Confidence Interval***
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(coninc), !is.na(wrkslf)) %>%
+  inference(y = coninc, x = wrkslf, type = "ci", statistic = "median", method = "simulation", 
+            nsim = 15000, boot_method = "se")
+```
+
+*From our result above, we are 95% confident that the typical family income (inflation-adjusted) of self-employed Americans at large that are very satisfied with their jobs is between $4,583.73 less and $23,733.73 more than that of Americans who work for someone else that are very satisfied with their jobs.*
+
+So based on the confidence interval we calculated above, should we expect to find a significant difference (at the equivalent significance level) between the average family incomes of self-employed Americans at large that are very satisfied with their jobs and Americans who work for someone else that are very satisfied with their jobs?
+
+Pop_median`self-employed` - Pop_median`someone else` = (-4583.7323 , 23733.7323)
+
+H`0`: Pop_med`self-employed` - Pop_med`someone else` = 0. 0 is in the confidence interval; we fail to reject the H`0`. So, the answer to the above question is no. **From our data, there is no significant difference between the typical family income of self-employed Americans at large that are very satisfied with their jobs and Americans who work for someone else are very satisfied with their jobs.**
+
+
+We will confirm the above result by conducting **a hypothesis test, at 5% significance level, using the bootstrap method** to evaluate if there is a difference in the typical family incomes of self-employed Americans who are very satisfied with their jobs and those who work for someone else and are very satisfied with their jobs.
+
+Let us define the hypothesis for our test:
+
+H`0`: Pop_med`self-employed` = Pop_med`someone else`. The typical family incomes of self-employed Americans who are very satisfied with their jobs is same as those who work for someone else that are very satisfied with their jobs.
+
+H`A`: Pop_med`self-employed` != Pop_med`someone else`. There is a difference in the typical family incomes of self-employed Americans who are very satisfied with their jobs and those who work for someone else and are very satisfied with their jobs.
+
+```{r}
+gssc %>%
+  filter(satjob == "Very Satisfied", !is.na(coninc), !is.na(wrkslf)) %>%
+  inference(y = coninc, x = wrkslf, type = "ht", statistic = "median", method = "simulation", 
+            alternative = "twosided", nsim = 15000, boot_method = "se")
+```
+
+The p-value is greater than 0.05, so we fail to reject the null hypothesis. **The data do not provide strong evidence that the typical family income of self-employed Americans who are very satisfied with their jobs is different from those who work for someone else and are very satisfied with their jobs.** This agrees with the conclusion from the (bootstrap) confidence interval approach, above.
+
+
+
+
+* * *
+
+## Part 5: Conclusion
+
+After analysis and inference, we conclude the following (as mentioned after each inference) for the year 2012:
+
+**1.** The data provides convincing evidence that job satisfaction does vary by respondent's employment status (self-employed and work for someone else). They are dependent.
+
+**2.** The data does not provide strong evidence that the population proportion of self-employed Americans who are satisfied with their jobs is different from those who work for someone else and are satisfied with their jobs.
+
+**3.** The data provides convincing evidence that the average family income of self-employed Americans who are very satisfied with their jobs is greater than that of those who work for someone else and are very satisfied with their jobs. 
+
+**4** The data does not provide strong evidence that the typical family income of self-employed Americans who are very satisfied with their jobs is different from those who work for someone else and are very satisfied with their jobs.
+
+***
+
+## References
+
+For this analysis, I used contents from the following websites and materials as a guide: 
+
+**1.**  David M Diez, Christopher D Barr and Mine Cetinkaya-Rundel. [*"OpenIntro Statistics, Third Edition"*](https://www.openintro.org/). (2016).
+
+**2.**   https://www.researchgate.net
+
+**3.**   https://rpubs.com 
+
+**4.**   http://rpubs.com/chiajieh   
+
+**5.**   https://stackoverflow.com
+
+**6.**   https://r-statistics.co
+
+**7.**   http://www.sthda.com
+
+**8.**  *"Statistics with R Specialization"*, by Duke University on Coursera - (ongoing)
+
+
+
+
+
